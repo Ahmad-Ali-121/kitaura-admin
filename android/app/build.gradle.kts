@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.kitaura_admin_panel_claude"
+    namespace = "com.example.kitaura_admin_panel"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.kitaura_admin_panel_claude"
+        applicationId = "com.example.kitaura_admin_panel"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
