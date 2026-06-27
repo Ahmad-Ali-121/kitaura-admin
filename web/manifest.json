@@ -1,6 +1,6 @@
 {
-    "name": "kitaura_admin_panel",
-    "short_name": "kitaura_admin_panel",
+    "name": "Kitaura Admin Panel",
+    "short_name": "Kitaura Admin",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

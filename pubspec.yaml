@@ -1,4 +1,4 @@
-name: kitaura_admin
+name: kitaura_admin_panel
 description: "KitAura Admin Panel — Flutter Web (separate deployment from main app)."
 publish_to: 'none'
 version: 0.1.0+1
