@@ -1,4 +1,4 @@
-# kitaura_admin_panel_claude
+# kitaura_admin_panel
 
 A new Flutter project.
 
