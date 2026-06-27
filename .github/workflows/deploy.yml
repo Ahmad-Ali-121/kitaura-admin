@@ -1,0 +1,54 @@
+name: Build and Deploy Flutter Web to Hostinger
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.9'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze
+        continue-on-error: true
+
+      - name: Build Flutter Web (optimized release)
+        run: |
+          flutter build web \
+            --release \
+            --base-href "/" \
+            --tree-shake-icons \
+            --source-maps
+
+      - name: Push build output to deploy branch
+        run: |
+          cd build/web
+          git init
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b hostinger-deploy
+          git add -A
+          git commit -m "deploy: $(date +'%Y-%m-%d %H:%M:%S')"
+          git push --force \
+            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git \
+            hostinger-deploy
