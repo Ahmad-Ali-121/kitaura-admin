@@ -197,8 +197,8 @@ class _Table extends StatelessWidget {
               borderRadius:
               BorderRadius.vertical(top: Radius.circular(8)),
             ),
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 _Th('TIME', flex: 3),
                 _Th('TOOL · TYPE', flex: 3),
                 _Th('STATUS', flex: 2),

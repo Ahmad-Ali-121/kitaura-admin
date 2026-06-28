@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kitaura_admin_panel/features/users/view/user_ai_activity_tab.dart';
 import 'package:kitaura_admin_panel/features/users/view/user_documents_tab.dart';
+import 'package:kitaura_admin_panel/features/users/view/user_transactions_tab.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/services/admin_functions_service.dart';
@@ -56,7 +57,7 @@ class UserDetailScreen extends ConsumerWidget {
               case _UserTab.documents:
                 return UserDocumentsTab(uid: uid);
               case _UserTab.transactions:
-                return const _TransactionsPlaceholder();
+                return UserTransactionsTab(uid: uid);
             }
           }),
         ],
@@ -1026,22 +1027,6 @@ class _TabBar extends ConsumerWidget {
           tab(_UserTab.transactions, 'Transactions',
               Icons.receipt_long_outlined),
         ],
-      ),
-    );
-  }
-}
-
-class _TransactionsPlaceholder extends StatelessWidget {
-  const _TransactionsPlaceholder();
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 40),
-      child: Center(
-        child: Text(
-          'Transactions tab coming in Step 18.',
-          style: TextStyle(color: AppColors.slateGrey, fontSize: 13),
-        ),
       ),
     );
   }
