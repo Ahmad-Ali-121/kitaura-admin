@@ -1,0 +1,775 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../core/constants/app_colors.dart';
+import '../controller/admin_ai_activity_controller.dart';
+import '../model/ai_activity_summary.dart';
+
+class AiActivityScreen extends ConsumerStatefulWidget {
+  const AiActivityScreen({super.key});
+
+  @override
+  ConsumerState<AiActivityScreen> createState() => _AiActivityScreenState();
+}
+
+class _AiActivityScreenState extends ConsumerState<AiActivityScreen> {
+  final _searchCtrl = TextEditingController();
+  final Set<String> _expanded = {};
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(aiActivityProvider);
+    final ctrl = ref.read(aiActivityProvider.notifier);
+    final rows = state.filteredItems;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Header(loading: state.loading, onRefresh: ctrl.refresh),
+          const SizedBox(height: 16),
+          _Filters(
+            state: state,
+            searchCtrl: _searchCtrl,
+            onDate: ctrl.setDateRange,
+            onTool: ctrl.setToolFilter,
+            onStatus: ctrl.setStatusFilter,
+            onSearch: ctrl.setUserSearch,
+          ),
+          const SizedBox(height: 16),
+          if (state.error != null) ...[
+            _ErrorBlock(error: state.error!),
+            const SizedBox(height: 14),
+          ],
+          if (state.loading && state.items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 80),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.darkRaspberry,
+                ),
+              ),
+            )
+          else if (rows.isEmpty)
+            _Empty(filtered: state.items.isNotEmpty)
+          else
+            _Table(
+              rows: rows,
+              expanded: _expanded,
+              onToggleExpand: (id) => setState(() {
+                if (!_expanded.add(id)) _expanded.remove(id);
+              }),
+            ),
+          const SizedBox(height: 16),
+          if (state.hasMore)
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: state.loadingMore ? null : ctrl.loadMore,
+                icon: state.loadingMore
+                    ? const SizedBox(
+                  height: 14,
+                  width: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.darkRaspberry,
+                  ),
+                )
+                    : const Icon(Icons.expand_more, size: 16),
+                label: Text(
+                  state.loadingMore ? 'Loading…' : 'Load 50 more',
+                ),
+              ),
+            ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── HEADER ───────────────────────────────────────────────────────────────
+
+class _Header extends StatelessWidget {
+  final bool loading;
+  final VoidCallback onRefresh;
+  const _Header({required this.loading, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'AI Activity',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.prussianBlue,
+                ),
+              ),
+              SizedBox(height: 2),
+              Text(
+                'Every AI call across all users — Compose, Refine, Assistant, Proofread, Client AI.',
+                style: TextStyle(fontSize: 13, color: AppColors.slateGrey),
+              ),
+            ],
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: loading ? null : onRefresh,
+          icon: const Icon(Icons.refresh, size: 16),
+          label: const Text('Refresh'),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── FILTERS ──────────────────────────────────────────────────────────────
+
+class _Filters extends StatelessWidget {
+  final AiActivityState state;
+  final TextEditingController searchCtrl;
+  final ValueChanged<String> onDate;
+  final ValueChanged<String> onTool;
+  final ValueChanged<String> onStatus;
+  final ValueChanged<String> onSearch;
+
+  const _Filters({
+    required this.state,
+    required this.searchCtrl,
+    required this.onDate,
+    required this.onTool,
+    required this.onStatus,
+    required this.onSearch,
+  });
+
+  static const _dateOptions = [
+    ('24h', 'Last 24 hours'),
+    ('7d', 'Last 7 days'),
+    ('30d', 'Last 30 days'),
+    ('all', 'All time'),
+  ];
+
+  static const _toolOptions = [
+    ('all', 'All tools'),
+    ('cv', 'CV'),
+    ('coverLetter', 'Cover Letter'),
+    ('proposal', 'Proposal'),
+    ('linkedin', 'LinkedIn'),
+    ('clientExtract', 'Client Extract'),
+    ('clientChat', 'Client Chat'),
+    ('editorAI', 'AI Assistant'),
+  ];
+
+  static const _statusOptions = [
+    ('all', 'All statuses'),
+    ('success', 'Success'),
+    ('error', 'Error'),
+    ('refused', 'Refused'),
+    ('cancelled', 'Cancelled'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.almondSilk),
+      ),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          _Dropdown<String>(
+            label: 'Date',
+            value: state.dateRange,
+            items: _dateOptions,
+            onChanged: onDate,
+            width: 180,
+          ),
+          _Dropdown<String>(
+            label: 'Tool',
+            value: state.toolFilter,
+            items: _toolOptions,
+            onChanged: onTool,
+            width: 180,
+          ),
+          _Dropdown<String>(
+            label: 'Status',
+            value: state.statusFilter,
+            items: _statusOptions,
+            onChanged: onStatus,
+            width: 160,
+          ),
+          SizedBox(
+            width: 240,
+            child: TextField(
+              controller: searchCtrl,
+              onChanged: onSearch,
+              decoration: const InputDecoration(
+                isDense: true,
+                prefixIcon: Icon(Icons.search, size: 18),
+                hintText: 'Email or UID',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Dropdown<T> extends StatelessWidget {
+  final String label;
+  final T value;
+  final List<(T, String)> items;
+  final ValueChanged<T> onChanged;
+  final double width;
+
+  const _Dropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: InputDecorator(
+        decoration: InputDecoration(
+          isDense: true,
+          labelText: label,
+          labelStyle: const TextStyle(
+            fontSize: 12,
+            color: AppColors.slateGrey,
+          ),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<T>(
+            value: value,
+            isExpanded: true,
+            onChanged: (v) {
+              if (v != null) onChanged(v);
+            },
+            items: items
+                .map((it) => DropdownMenuItem<T>(
+              value: it.$1,
+              child: Text(
+                it.$2,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ))
+                .toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── TABLE ────────────────────────────────────────────────────────────────
+
+class _Table extends StatelessWidget {
+  final List<AiActivitySummary> rows;
+  final Set<String> expanded;
+  final ValueChanged<String> onToggleExpand;
+
+  const _Table({
+    required this.rows,
+    required this.expanded,
+    required this.onToggleExpand,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.almondSilk),
+      ),
+      child: Column(
+        children: [
+          const _HeaderRow(),
+          for (var i = 0; i < rows.length; i++) ...[
+            const Divider(
+              color: AppColors.almondSilk,
+              height: 0,
+              thickness: 0.3,
+            ),
+            _DataRow(
+              row: rows[i],
+              expanded: expanded.contains(rows[i].id),
+              onTap: () => onToggleExpand(rows[i].id),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderRow extends StatelessWidget {
+  const _HeaderRow();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: const BoxDecoration(
+        color: AppColors.lavenderBlush,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+      ),
+      child: Row(
+        children: const [
+          _HeaderCell('TIME', flex: 2),
+          _HeaderCell('USER', flex: 3),
+          _HeaderCell('TOOL', flex: 2),
+          _HeaderCell('TYPE', flex: 2),
+          _HeaderCell('STATUS', flex: 2),
+          _HeaderCell('COST', flex: 2, align: TextAlign.right),
+          _HeaderCell('TOKENS', flex: 3, align: TextAlign.right),
+          SizedBox(width: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderCell extends StatelessWidget {
+  final String text;
+  final int flex;
+  final TextAlign align;
+  const _HeaderCell(this.text,
+      {this.flex = 1, this.align = TextAlign.left});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        text,
+        textAlign: align,
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: AppColors.slateGrey,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _DataRow extends StatelessWidget {
+  final AiActivitySummary row;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  const _DataRow({
+    required this.row,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final timeFmt = DateFormat('MMM d, HH:mm:ss');
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Padding(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    row.createdAt == null
+                        ? '—'
+                        : timeFmt.format(row.createdAt!.toLocal()),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.prussianBlue,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        row.userEmail ?? '(no email)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.prussianBlue,
+                        ),
+                      ),
+                      Text(
+                        row.userId ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.slateGrey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    row.tool ?? '—',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.prussianBlue,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    row.type ?? '—',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.slateGrey,
+                    ),
+                  ),
+                ),
+                Expanded(flex: 2, child: _StatusChip(status: row.status)),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    '\$${row.totalCost.toStringAsFixed(4)}',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.prussianBlue,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    '${row.inputTokens} in · ${row.outputTokens} out'
+                        '${row.cacheReadTokens > 0 ? ' · ${row.cacheReadTokens} cache' : ''}',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.slateGrey,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 24,
+                  child: Icon(
+                    expanded
+                        ? Icons.expand_less
+                        : Icons.expand_more,
+                    size: 18,
+                    color: AppColors.slateGrey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (expanded) _ExpandedDetail(row: row),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String? status;
+  const _StatusChip({required this.status});
+
+  Color get _color {
+    switch (status) {
+      case 'success':
+        return AppColors.dustyMauve;
+      case 'error':
+        return AppColors.dangerRed;
+      case 'refused':
+        return AppColors.magentaBloom;
+      case 'cancelled':
+        return AppColors.slateGrey;
+      default:
+        return AppColors.almondSilk;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: _color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: _color, width: 1),
+        ),
+        child: Text(
+          (status ?? '—').toUpperCase(),
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: _color,
+            letterSpacing: 0.8,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpandedDetail extends StatelessWidget {
+  final AiActivitySummary row;
+  const _ExpandedDetail({required this.row});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: AppColors.lavenderBlush,
+        border: Border(
+          top: BorderSide(color: AppColors.almondSilk, width: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 24,
+            runSpacing: 10,
+            children: [
+              _Field(label: 'Activity ID', value: row.id),
+              _Field(label: 'Model', value: row.model ?? '—'),
+              _Field(
+                label: 'Section',
+                value: row.sectionType ?? '—',
+              ),
+              _Field(
+                label: 'Document',
+                value: row.documentTitle ??
+                    (row.documentId ?? '—'),
+              ),
+              _Field(label: 'Template', value: row.templateId ?? '—'),
+              _Field(
+                label: 'Duration',
+                value:
+                row.durationMs > 0 ? '${row.durationMs} ms' : '—',
+              ),
+              if (row.cacheCreationTokens > 0)
+                _Field(
+                  label: 'Cache write',
+                  value: '${row.cacheCreationTokens} tokens',
+                ),
+              if (row.rewriteMode != null)
+                _Field(label: 'Refine mode', value: row.rewriteMode!),
+              if (row.editorAiOps != null)
+                _Field(
+                  label: 'Editor ops',
+                  value: row.editorAiOps!.join(', '),
+                ),
+            ],
+          ),
+          if (row.errorMessage != null) ...[
+            const SizedBox(height: 14),
+            _MessageBlock(
+              title: 'Error',
+              body: row.errorMessage!,
+              color: AppColors.dangerRed,
+            ),
+          ],
+          if (row.refusalReason != null) ...[
+            const SizedBox(height: 14),
+            _MessageBlock(
+              title: 'Refusal reason',
+              body: row.refusalReason!,
+              color: AppColors.magentaBloom,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Field extends StatelessWidget {
+  final String label;
+  final String value;
+  const _Field({required this.label, required this.value});
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 280),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppColors.slateGrey,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 2),
+          SelectableText(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.prussianBlue,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MessageBlock extends StatelessWidget {
+  final String title;
+  final String body;
+  final Color color;
+  const _MessageBlock({
+    required this.title,
+    required this.body,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 4),
+          SelectableText(
+            body,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.prussianBlue,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── EMPTY / ERROR ────────────────────────────────────────────────────────
+
+class _Empty extends StatelessWidget {
+  final bool filtered;
+  const _Empty({required this.filtered});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(60),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.almondSilk),
+      ),
+      child: Center(
+        child: Text(
+          filtered
+              ? 'No activity matches your filters.'
+              : 'No AI activity found in the selected date range.',
+          style: const TextStyle(
+            color: AppColors.slateGrey,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorBlock extends StatelessWidget {
+  final String error;
+  const _ErrorBlock({required this.error});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.dangerRed.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+            color: AppColors.dangerRed.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline,
+              color: AppColors.dangerRed, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SelectableText(
+              error,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.prussianBlue,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

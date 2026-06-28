@@ -7,7 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kitaura_admin/app.dart';
+import 'package:kitaura_admin_panel/app.dart';
 
 
 void main() {
