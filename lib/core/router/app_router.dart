@@ -16,6 +16,7 @@ import '../../features/config/feature_flags/view/feature_flags_screen.dart';
 import '../../features/config/announcements/view/announcement_editor_screen.dart';
 import '../../features/ai/view/ai_activity_screen.dart';
 import '../../features/ai/view/ai_failures_screen.dart';
+import '../../features/finance/view/cost_overview_screen.dart';
 
 class _AuthRefreshNotifier extends ChangeNotifier {
   _AuthRefreshNotifier(Ref ref) {
@@ -93,6 +94,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/ai/failures',
             builder: (context, state) => const AiFailuresScreen(),
+          ),
+          GoRoute(
+            path: '/admin/finance',
+            builder: (context, state) => const CostOverviewScreen(),
           ),
         ],
       ),

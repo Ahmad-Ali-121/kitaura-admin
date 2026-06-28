@@ -154,13 +154,35 @@ class AdminFunctionsService {
     int limit = 50,
     String? cursor,
     String? startDate,
-    String? statusFilter,    // ← add this
+    String? statusFilter,
+    String? userId,    // ← add
   }) async {
     final result = await _callable('adminListAiActivity').call<Map>({
       'limit': limit,
       if (cursor != null) 'cursor': cursor,
       if (startDate != null) 'startDate': startDate,
       if (statusFilter != null) 'statusFilter': statusFilter,
+      if (userId != null) 'userId': userId,    // ← add
+    });
+    return Map<String, dynamic>.from(result.data);
+  }
+
+  // ─── Cost Overview ─────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> getCostOverview({
+    int daysBack = 30,
+  }) async {
+    final result = await _callable('adminGetCostOverview').call<Map>({
+      'daysBack': daysBack,
+    });
+    return Map<String, dynamic>.from(result.data);
+  }
+
+  // ─── User Documents ────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> listUserDocuments({
+    required String targetUid,
+  }) async {
+    final result = await _callable('adminListUserDocuments').call<Map>({
+      'targetUid': targetUid,
     });
     return Map<String, dynamic>.from(result.data);
   }

@@ -2,12 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:kitaura_admin_panel/features/users/view/user_ai_activity_tab.dart';
+import 'package:kitaura_admin_panel/features/users/view/user_documents_tab.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/services/admin_functions_service.dart';
 import '../../../shared/widgets/admin_confirm_dialog.dart';
 import '../controller/admin_user_detail_controller.dart';
 import '../model/admin_user_detail.dart';
+
+
+enum _UserTab { aiActivity, documents, transactions }
+
+final _activeUserTabProvider =
+StateProvider.autoDispose.family<_UserTab, String>(
+      (ref, uid) => _UserTab.aiActivity,
+);
+
 
 class UserDetailScreen extends ConsumerWidget {
   final String uid;
@@ -33,6 +44,21 @@ class UserDetailScreen extends ConsumerWidget {
             error: (err, _) => _ErrorBlock(error: err.toString()),
             data: (user) => _Body(user: user, ref: ref),
           ),
+
+          const SizedBox(height: 20),
+          _TabBar(uid: uid /* or whatever the uid variable is named */),
+          const SizedBox(height: 12),
+          Builder(builder: (context) {
+            final tab = ref.watch(_activeUserTabProvider(uid));
+            switch (tab) {
+              case _UserTab.aiActivity:
+                return UserAiActivityTab(uid: uid);
+              case _UserTab.documents:
+                return UserDocumentsTab(uid: uid);
+              case _UserTab.transactions:
+                return const _TransactionsPlaceholder();
+            }
+          }),
         ],
       ),
     );
@@ -926,6 +952,96 @@ class _ErrorBlock extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TabBar extends ConsumerWidget {
+  final String uid;
+  const _TabBar({required this.uid});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active = ref.watch(_activeUserTabProvider(uid));
+    Widget tab(_UserTab id, String label, IconData icon) {
+      final isActive = active == id;
+      return Expanded(
+        child: InkWell(
+          onTap: () =>
+          ref.read(_activeUserTabProvider(uid).notifier).state = id,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isActive
+                      ? AppColors.darkRaspberry
+                      : Colors.transparent,
+                  width: 2.5,
+                ),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 14,
+                  color: isActive
+                      ? AppColors.darkRaspberry
+                      : AppColors.slateGrey,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight:
+                    isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: isActive
+                        ? AppColors.darkRaspberry
+                        : AppColors.slateGrey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppColors.almondSilk, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          tab(_UserTab.aiActivity, 'AI Activity', Icons.bolt_outlined),
+          tab(_UserTab.documents, 'Documents',
+              Icons.folder_outlined),
+          tab(_UserTab.transactions, 'Transactions',
+              Icons.receipt_long_outlined),
+        ],
+      ),
+    );
+  }
+}
+
+class _TransactionsPlaceholder extends StatelessWidget {
+  const _TransactionsPlaceholder();
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 40),
+      child: Center(
+        child: Text(
+          'Transactions tab coming in Step 18.',
+          style: TextStyle(color: AppColors.slateGrey, fontSize: 13),
+        ),
       ),
     );
   }

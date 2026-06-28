@@ -341,8 +341,8 @@ class _HeaderRow extends StatelessWidget {
         color: AppColors.lavenderBlush,
         borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
       ),
-      child: Row(
-        children: const [
+      child: const Row(
+        children: [
           _HeaderCell('TIME', flex: 2),
           _HeaderCell('USER', flex: 3),
           _HeaderCell('TOOL', flex: 2),

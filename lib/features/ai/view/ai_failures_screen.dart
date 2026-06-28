@@ -261,8 +261,8 @@ class _GroupingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.bug_report_outlined,
                   size: 16, color: AppColors.dangerRed),
               SizedBox(width: 6),
@@ -536,8 +536,8 @@ class _HeaderRow extends StatelessWidget {
         color: AppColors.lavenderBlush,
         borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
       ),
-      child: Row(
-        children: const [
+      child: const Row(
+        children: [
           _HeaderCell('TIME', flex: 2),
           _HeaderCell('USER', flex: 3),
           _HeaderCell('TOOL / TYPE', flex: 3),

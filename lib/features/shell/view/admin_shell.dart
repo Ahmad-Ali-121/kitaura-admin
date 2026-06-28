@@ -129,7 +129,7 @@ class _AdminSidebar extends ConsumerWidget {
                   label: 'Finance',
                   route: '/admin/finance',
                   active: location == '/admin/finance',
-                  disabled: true,
+                  disabled: false,
                 ),
                 const _SidebarSection(label: 'CONFIG'),
                 _SidebarItem(
