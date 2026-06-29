@@ -33,176 +33,172 @@ class AdminShell extends ConsumerWidget {
 
 // ─── SIDEBAR ─────────────────────────────────────────────────────────────
 
-class _AdminSidebar extends ConsumerWidget {
+/// Lightweight data class for a single nav row.
+class _NavItemData {
+  final IconData icon;
+  final String label;
+  final String route;
+  const _NavItemData(this.icon, this.label, this.route);
+}
+
+class _AdminSidebar extends ConsumerStatefulWidget {
   const _AdminSidebar();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AdminSidebar> createState() => _AdminSidebarState();
+}
+
+class _AdminSidebarState extends ConsumerState<_AdminSidebar> {
+  // Expanded state per collapsible section. Persists across route changes
+  // within the same session (the shell widget is kept alive by GoRouter).
+  final Map<String, bool> _expanded = {
+    'AI': true,
+    'FINANCE': true,
+    'CONFIG': true,
+  };
+
+  // ─── Nav data ─────────────────────────────────────────────────────────
+
+  static const _overview = [
+    _NavItemData(Icons.dashboard_outlined, 'Dashboard', '/admin'),
+  ];
+
+  static const _manage = [
+    _NavItemData(Icons.people_outline, 'Users', '/admin/users'),
+    _NavItemData(Icons.folder_outlined, 'Documents', '/admin/documents'),
+  ];
+
+  static const _ai = [
+    _NavItemData(Icons.auto_awesome_outlined, 'Activity', '/admin/ai'),
+    _NavItemData(Icons.error_outline, 'Failures', '/admin/ai/failures'),
+    _NavItemData(Icons.block, 'Refusals', '/admin/ai/refusals'),
+    _NavItemData(Icons.shield_outlined, 'Abuse Monitor', '/admin/abuse'),
+  ];
+
+  static const _finance = [
+    _NavItemData(Icons.attach_money, 'Overview', '/admin/finance'),
+    _NavItemData(Icons.leaderboard_outlined, 'By User', '/admin/finance/by-user'),
+    _NavItemData(Icons.pie_chart_outline, 'By Feature', '/admin/finance/by-feature'),
+  ];
+
+  static const _config = [
+    _NavItemData(Icons.tune, 'Plan Limits', '/admin/config/limits'),
+    _NavItemData(Icons.price_change_outlined, 'Pricing', '/admin/config/pricing'),
+    _NavItemData(Icons.workspace_premium, 'Pro Templates',
+        '/admin/config/pro-templates'),
+    _NavItemData(Icons.toggle_on_outlined, 'Feature Flags',
+        '/admin/config/feature-flags'),
+    _NavItemData(Icons.campaign_outlined, 'Announcements',
+        '/admin/config/announcements'),
+  ];
+
+  static const _audit = [
+    _NavItemData(Icons.history, 'Audit Log', '/admin/audit'),
+  ];
+
+  /// All known routes used to compute the best-matching active item.
+  static const _allRoutes = [
+    '/admin',
+    '/admin/users',
+    '/admin/documents',
+    '/admin/ai',
+    '/admin/ai/failures',
+    '/admin/ai/refusals',
+    '/admin/abuse',
+    '/admin/finance',
+    '/admin/finance/by-user',
+    '/admin/finance/by-feature',
+    '/admin/config/limits',
+    '/admin/config/pricing',
+    '/admin/config/pro-templates',
+    '/admin/config/feature-flags',
+    '/admin/config/announcements',
+    '/admin/audit',
+  ];
+
+  /// Returns the longest route prefix that matches the current location.
+  /// So `/admin/users/abc123` resolves to `/admin/users`, and
+  /// `/admin/ai/failures` resolves to itself (not `/admin/ai`).
+  String _findActiveRoute(String location) {
+    var best = '';
+    for (final r in _allRoutes) {
+      final isMatch = r == location || location.startsWith('$r/');
+      if (isMatch && r.length > best.length) {
+        best = r;
+      }
+    }
+    return best;
+  }
+
+  // ─── Build ────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
+    final activeRoute = _findActiveRoute(location);
 
     return Container(
       width: 250,
-      decoration: const BoxDecoration(
-        color: AppColors.prussianBlue,
-      ),
+      decoration: const BoxDecoration(color: AppColors.prussianBlue),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Logo block
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-            child: Row(
-              children: [
-                const Text(
-                  'KITAURA',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 17,
-                    letterSpacing: 1.5,
-                    color: AppColors.white,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.magentaBloom,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: const Text(
-                    'ADMIN',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 9,
-                      letterSpacing: 1,
-                      color: AppColors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
+          _buildLogo(),
           const Divider(
-              color: AppColors.slateGrey, height: 1, thickness: 0.3),
-
-          // Nav items
+            color: AppColors.slateGrey,
+            height: 1,
+            thickness: 0.3,
+          ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                // ignore: prefer_const_constructors
-                _SidebarSection(label: 'OVERVIEW'),
-                _SidebarItem(
-                  icon: Icons.dashboard_outlined,
-                  label: 'Dashboard',
-                  route: '/admin',
-                  active: location == '/admin',
-                ),
-                const _SidebarSection(label: 'MANAGE'),
-                _SidebarItem(
-                  icon: Icons.people_outline,
-                  label: 'Users',
-                  route: '/admin/users',
-                  active: location == '/admin/users',
-                  disabled: false,
-                ),
-                _SidebarItem(
-                  icon: Icons.auto_awesome_outlined,
-                  label: 'AI Activity',
-                  route: '/admin/ai',
-                  active: location == '/admin/ai',
-                  disabled: false,
-                ),
-                _SidebarItem(
-                  icon: Icons.error_outline,
-                  label: 'AI Failures',
-                  route: '/admin/ai/failures',
-                  active: location == '/admin/ai/failures',
-                  disabled: false,
-                ),
-                _SidebarItem(
-                  icon: Icons.attach_money,
-                  label: 'Finance',
-                  route: '/admin/finance',
-                  active: location == '/admin/finance',
-                  disabled: false,
-                ),
-                const _SidebarSection(label: 'CONFIG'),
-                _SidebarItem(
-                  icon: Icons.tune,
-                  label: 'Plan Limits',
-                  route: '/admin/config/limits',
-                  active: location == '/admin/config/limits',
-                  disabled: false,
-                ),
-                _SidebarItem(
-                  icon: Icons.price_change_outlined,
-                  label: 'Pricing',
-                  route: '/admin/config/pricing',
-                  active: location == '/admin/config/pricing',
-                  disabled: false,
-                ),
-                _SidebarItem(
-                  icon: Icons.workspace_premium,
-                  label: 'Pro Templates',
-                  route: '/admin/config/pro-templates',
-                  active: location == '/admin/config/pro-templates',
-                  disabled: false,
-                ),
-                _SidebarItem(
-                  icon: Icons.toggle_on_outlined,
-                  label: 'Feature Flags',
-                  route: '/admin/config/feature-flags',
-                  active: location == '/admin/config/feature-flags',
-                  disabled: false,
-                ),
-                _SidebarItem(
-                  icon: Icons.campaign_outlined,
-                  label: 'Announcements',
-                  route: '/admin/config/announcements',
-                  active: location == '/admin/config/announcements',
-                  disabled: false,
-                ),
-                const _SidebarSection(label: 'AUDIT'),
-                _SidebarItem(
-                  icon: Icons.history,
-                  label: 'Audit Log',
-                  route: '/admin/audit',
-                  active: location == '/admin/audit',
-                  disabled: false,
-                ),
+                _buildFlatSection('OVERVIEW', _overview, activeRoute),
+                _buildFlatSection('MANAGE', _manage, activeRoute),
+                _buildCollapsibleSection('AI', _ai, activeRoute),
+                _buildCollapsibleSection('FINANCE', _finance, activeRoute),
+                _buildCollapsibleSection('CONFIG', _config, activeRoute),
+                _buildFlatSection('AUDIT', _audit, activeRoute),
               ],
             ),
           ),
+          _buildSignOut(),
+        ],
+      ),
+    );
+  }
 
-          // Sign out
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: InkWell(
-              onTap: () => ref.read(adminAuthProvider.notifier).signOut(),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 12),
-                child: const Row(
-                  children: [
-                    Icon(Icons.logout,
-                        color: AppColors.almondSilk, size: 18),
-                    SizedBox(width: 12),
-                    Text(
-                      'Sign out',
-                      style: TextStyle(
-                        color: AppColors.almondSilk,
-                        fontSize: 13,
-                        fontFamily: 'OpenSans',
-                      ),
-                    ),
-                  ],
-                ),
+  Widget _buildLogo() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      child: Row(
+        children: [
+          const Text(
+            'KITAURA',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w800,
+              fontSize: 17,
+              letterSpacing: 1.5,
+              color: AppColors.white,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.magentaBloom,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: const Text(
+              'ADMIN',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                fontSize: 9,
+                letterSpacing: 1,
+                color: AppColors.white,
               ),
             ),
           ),
@@ -210,8 +206,102 @@ class _AdminSidebar extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildFlatSection(
+      String label,
+      List<_NavItemData> items,
+      String activeRoute,
+      ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SidebarSection(label: label),
+        ...items.map((it) => _SidebarItem(
+          icon: it.icon,
+          label: it.label,
+          route: it.route,
+          active: it.route == activeRoute,
+        )),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  Widget _buildCollapsibleSection(
+      String key,
+      List<_NavItemData> items,
+      String activeRoute,
+      ) {
+    final expanded = _expanded[key] ?? true;
+    final hasActiveChild = items.any((it) => it.route == activeRoute);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _CollapsibleSectionHeader(
+          label: key,
+          expanded: expanded,
+          hasActiveChild: hasActiveChild,
+          onTap: () => setState(() => _expanded[key] = !expanded),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          alignment: Alignment.topCenter,
+          curve: Curves.easeInOut,
+          child: ClipRect(
+            child: expanded
+                ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: items
+                  .map((it) => _SidebarItem(
+                icon: it.icon,
+                label: it.label,
+                route: it.route,
+                active: it.route == activeRoute,
+              ))
+                  .toList(),
+            )
+                : const SizedBox(width: double.infinity),
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  Widget _buildSignOut() {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: InkWell(
+        onTap: () => ref.read(adminAuthProvider.notifier).signOut(),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: const Row(
+            children: [
+              Icon(Icons.logout,
+                  color: AppColors.almondSilk, size: 18),
+              SizedBox(width: 12),
+              Text(
+                'Sign out',
+                style: TextStyle(
+                  color: AppColors.almondSilk,
+                  fontSize: 13,
+                  fontFamily: 'OpenSans',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
+// ─── SECTION HEADERS ─────────────────────────────────────────────────────
+
+/// Non-interactive section header for flat (non-collapsible) sections.
 class _SidebarSection extends StatelessWidget {
   final String label;
   const _SidebarSection({required this.label});
@@ -219,7 +309,7 @@ class _SidebarSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
       child: Text(
         label,
         style: const TextStyle(
@@ -234,46 +324,122 @@ class _SidebarSection extends StatelessWidget {
   }
 }
 
+/// Tappable header for collapsible sections. Shows a chevron that rotates
+/// to indicate expand/collapse state. Label shifts brighter when any
+/// child is active so the section reads as "you're in here" even when
+/// collapsed.
+class _CollapsibleSectionHeader extends StatelessWidget {
+  final String label;
+  final bool expanded;
+  final bool hasActiveChild;
+  final VoidCallback onTap;
+
+  const _CollapsibleSectionHeader({
+    required this.label,
+    required this.expanded,
+    required this.hasActiveChild,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final labelColor =
+    hasActiveChild ? AppColors.white : AppColors.slateGrey;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 16, 4),
+          child: Row(
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: labelColor,
+                ),
+              ),
+              if (hasActiveChild) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color: AppColors.magentaBloom,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+              const Spacer(),
+              AnimatedRotation(
+                turns: expanded ? 0 : -0.25,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeInOut,
+                child: Icon(
+                  Icons.expand_more,
+                  size: 14,
+                  color: labelColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── SIDEBAR ITEM ────────────────────────────────────────────────────────
+
 class _SidebarItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String route;
   final bool active;
-  final bool disabled;
 
   const _SidebarItem({
     required this.icon,
     required this.label,
     required this.route,
     required this.active,
-    this.disabled = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = disabled
-        ? AppColors.slateGrey
-        : (active ? AppColors.white : AppColors.almondSilk);
+    final color = active ? AppColors.white : AppColors.almondSilk;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       decoration: BoxDecoration(
         color: active
-            ? AppColors.magentaBloom.withValues(alpha: 0.15)
+            ? AppColors.magentaBloom.withValues(alpha: 0.18)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
+        border: active
+            ? Border(
+          left: BorderSide(
+            color: AppColors.magentaBloom,
+            width: 2,
+          ),
+        )
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
-          onTap: disabled ? null : () => context.go(route),
+          onTap: () => context.go(route),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 10),
+                horizontal: 12, vertical: 9),
             child: Row(
               children: [
-                Icon(icon, color: color, size: 18),
+                Icon(icon, color: color, size: 17),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -287,16 +453,6 @@ class _SidebarItem extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (disabled)
-                  const Text(
-                    'soon',
-                    style: TextStyle(
-                      color: AppColors.slateGrey,
-                      fontSize: 9,
-                      fontFamily: 'Poppins',
-                      letterSpacing: 0.5,
-                    ),
-                  ),
               ],
             ),
           ),
@@ -369,9 +525,27 @@ class _AdminTopBar extends ConsumerWidget {
   String _titleForRoute(String location) {
     if (location == '/admin') return 'Dashboard';
     if (location.startsWith('/admin/users')) return 'Users';
+    if (location.startsWith('/admin/documents')) return 'Documents';
+    if (location.startsWith('/admin/ai/failures')) return 'AI Failures';
+    if (location.startsWith('/admin/ai/refusals')) return 'AI Refusals';
     if (location.startsWith('/admin/ai')) return 'AI Activity';
-    if (location.startsWith('/admin/finance')) return 'Finance';
-    if (location.startsWith('/admin/config')) return 'Config';
+    if (location.startsWith('/admin/abuse')) return 'Abuse Monitor';
+    if (location.startsWith('/admin/finance/by-user')) return 'Cost by User';
+    if (location.startsWith('/admin/finance/by-feature')) {
+      return 'Cost by Feature';
+    }
+    if (location.startsWith('/admin/finance')) return 'Cost Overview';
+    if (location.startsWith('/admin/config/limits')) return 'Plan Limits';
+    if (location.startsWith('/admin/config/pricing')) return 'Pricing';
+    if (location.startsWith('/admin/config/pro-templates')) {
+      return 'Pro Templates';
+    }
+    if (location.startsWith('/admin/config/feature-flags')) {
+      return 'Feature Flags';
+    }
+    if (location.startsWith('/admin/config/announcements')) {
+      return 'Announcements';
+    }
     if (location.startsWith('/admin/audit')) return 'Audit Log';
     return 'Admin';
   }

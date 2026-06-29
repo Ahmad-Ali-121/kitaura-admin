@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/ai/view/ai_refusals_screen.dart';
 import '../../features/auth/controller/admin_auth_controller.dart';
 import '../../features/auth/view/admin_login_screen.dart';
 import '../../features/dashboard/view/admin_dashboard_screen.dart';
@@ -17,6 +18,11 @@ import '../../features/config/announcements/view/announcement_editor_screen.dart
 import '../../features/ai/view/ai_activity_screen.dart';
 import '../../features/ai/view/ai_failures_screen.dart';
 import '../../features/finance/view/cost_overview_screen.dart';
+import '../../features/finance/view/cost_by_user_screen.dart';
+import '../../features/finance/view/cost_by_feature_screen.dart';
+import '../../features/abuse/view/abuse_monitor_screen.dart';
+import '../../features/documents/view/documents_list_screen.dart';
+import '../../features/documents/view/document_inspector_screen.dart';
 
 class _AuthRefreshNotifier extends ChangeNotifier {
   _AuthRefreshNotifier(Ref ref) {
@@ -96,8 +102,48 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AiFailuresScreen(),
           ),
           GoRoute(
+            path: '/admin/ai/refusals',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: AiRefusalsScreen(),
+            ),
+          ),
+          GoRoute(
             path: '/admin/finance',
             builder: (context, state) => const CostOverviewScreen(),
+          ),
+          GoRoute(
+            path: '/admin/finance/by-user',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CostByUserScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/finance/by-feature',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CostByFeatureScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/abuse',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: AbuseMonitorScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/documents',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: DocumentsListScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/documents/:type/:uid/:docId',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: DocumentInspectorScreen(
+                type: state.pathParameters['type']!,
+                uid: state.pathParameters['uid']!,
+                docId: state.pathParameters['docId']!,
+              ),
+            ),
           ),
         ],
       ),

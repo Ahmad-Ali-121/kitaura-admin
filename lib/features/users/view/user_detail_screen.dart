@@ -141,11 +141,13 @@ class _ProfileCard extends StatelessWidget {
           CircleAvatar(
             radius: 32,
             backgroundColor: AppColors.darkRaspberry,
-            backgroundImage: user.photoUrl != null
+            foregroundImage: user.photoUrl != null
                 ? NetworkImage(user.photoUrl!)
                 : null,
-            child: user.photoUrl == null
-                ? Text(
+            onForegroundImageError: user.photoUrl != null
+                ? (_, __) {} // swallow 429s; fall back to initial
+                : null,
+            child: Text(
               initial,
               style: const TextStyle(
                 fontFamily: 'Poppins',
@@ -153,8 +155,7 @@ class _ProfileCard extends StatelessWidget {
                 fontSize: 22,
                 color: AppColors.white,
               ),
-            )
-                : null,
+            ),
           ),
           const SizedBox(width: 18),
           Expanded(
