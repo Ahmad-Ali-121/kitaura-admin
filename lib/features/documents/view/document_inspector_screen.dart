@@ -2,10 +2,13 @@
 //
 // Step 23 — Document Inspector at /admin/documents/:type/:uid/:docId.
 //
-// Read-only viewer. Three blocks:
+// Read-only viewer. Four blocks:
 //   1. Metadata card (title, owner, template, status, dates, exports)
-//   2. Items list — each row tappable to reveal its full JSON
-//   3. Raw document JSON — full Firestore doc as pretty-printed text
+//      with "Open owner" + "View document" buttons.
+//   2. Canvas preview card — collapsible, renders the actual canvas
+//      using AdminCanvasRenderer. Toggled by the "View document" button.
+//   3. Items list — each row tappable to reveal its full JSON.
+//   4. Raw document JSON — full Firestore doc as pretty-printed text.
 
 import 'dart:convert';
 
@@ -17,6 +20,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../controller/admin_document_inspector_controller.dart';
+import 'admin_canvas_renderer.dart';
 
 class DocumentInspectorScreen extends ConsumerStatefulWidget {
   final String type;
@@ -38,6 +42,7 @@ class _DocumentInspectorScreenState
     extends ConsumerState<DocumentInspectorScreen> {
   final Set<int> _expandedItems = {};
   bool _rawDocExpanded = false;
+  bool _canvasVisible = false;
 
   @override
   Widget build(BuildContext context) {
@@ -66,11 +71,14 @@ class _DocumentInspectorScreenState
               doc: doc,
               expandedItems: _expandedItems,
               rawDocExpanded: _rawDocExpanded,
+              canvasVisible: _canvasVisible,
               onToggleItem: (idx) => setState(() {
                 if (!_expandedItems.add(idx)) _expandedItems.remove(idx);
               }),
               onToggleRawDoc: () =>
                   setState(() => _rawDocExpanded = !_rawDocExpanded),
+              onToggleCanvas: () =>
+                  setState(() => _canvasVisible = !_canvasVisible),
             ),
           ),
           const SizedBox(height: 24),
@@ -122,15 +130,19 @@ class _Body extends StatelessWidget {
   final AdminDocument doc;
   final Set<int> expandedItems;
   final bool rawDocExpanded;
+  final bool canvasVisible;
   final ValueChanged<int> onToggleItem;
   final VoidCallback onToggleRawDoc;
+  final VoidCallback onToggleCanvas;
 
   const _Body({
     required this.doc,
     required this.expandedItems,
     required this.rawDocExpanded,
+    required this.canvasVisible,
     required this.onToggleItem,
     required this.onToggleRawDoc,
+    required this.onToggleCanvas,
   });
 
   @override
@@ -138,9 +150,20 @@ class _Body extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _MetadataCard(doc: doc),
+        _MetadataCard(
+          doc: doc,
+          canvasVisible: canvasVisible,
+          onToggleCanvas: onToggleCanvas,
+        ),
         const SizedBox(height: 16),
         _DocSpecificCard(doc: doc),
+        if (canvasVisible) ...[
+          const SizedBox(height: 16),
+          _CanvasPreviewCard(
+            doc: doc,
+            onClose: onToggleCanvas,
+          ),
+        ],
         const SizedBox(height: 16),
         _ItemsCard(
           doc: doc,
@@ -162,7 +185,14 @@ class _Body extends StatelessWidget {
 
 class _MetadataCard extends ConsumerWidget {
   final AdminDocument doc;
-  const _MetadataCard({required this.doc});
+  final bool canvasVisible;
+  final VoidCallback onToggleCanvas;
+
+  const _MetadataCard({
+    required this.doc,
+    required this.canvasVisible,
+    required this.onToggleCanvas,
+  });
 
   String _typeLabel() {
     switch (doc.type) {
@@ -288,14 +318,16 @@ class _MetadataCard extends ConsumerWidget {
               _MiniInfo(
                 icon: Icons.add_circle_outline,
                 label: 'Created',
-                value:
-                createdAt == null ? '—' : dateFmt.format(createdAt.toLocal()),
+                value: createdAt == null
+                    ? '—'
+                    : dateFmt.format(createdAt.toLocal()),
               ),
               _MiniInfo(
                 icon: Icons.edit_outlined,
                 label: 'Updated',
-                value:
-                updatedAt == null ? '—' : dateFmt.format(updatedAt.toLocal()),
+                value: updatedAt == null
+                    ? '—'
+                    : dateFmt.format(updatedAt.toLocal()),
               ),
               if (lastExportedAt != null)
                 _MiniInfo(
@@ -306,10 +338,28 @@ class _MetadataCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          OutlinedButton.icon(
-            onPressed: () => context.go('/admin/users/${doc.uid}'),
-            icon: const Icon(Icons.person_outline, size: 16),
-            label: const Text('Open owner'),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => context.go('/admin/users/${doc.uid}'),
+                icon: const Icon(Icons.person_outline, size: 16),
+                label: const Text('Open owner'),
+              ),
+              ElevatedButton.icon(
+                onPressed: onToggleCanvas,
+                icon: Icon(
+                  canvasVisible
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 16,
+                ),
+                label: Text(
+                  canvasVisible ? 'Hide document' : 'View document',
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -396,6 +446,115 @@ class _DocSpecificCard extends StatelessWidget {
               value: f.$2,
             ))
                 .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── CANVAS PREVIEW CARD ─────────────────────────────────────────────────
+
+class _CanvasPreviewCard extends StatelessWidget {
+  final AdminDocument doc;
+  final VoidCallback onClose;
+  const _CanvasPreviewCard({
+    required this.doc,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final data = doc.data;
+    final canvasBg = data['canvasBackground'] as String?;
+    final items = doc.items;
+
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.visibility_outlined,
+                size: 18,
+                color: AppColors.darkRaspberry,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Document preview',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.prussianBlue,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.lavenderBlush,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: const Text(
+                  'READ-ONLY',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.dustyMauve,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onClose,
+                icon: const Icon(Icons.close, size: 18),
+                color: AppColors.slateGrey,
+                tooltip: 'Hide preview',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 32,
+                  minHeight: 32,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Visual approximation — fonts and Quill formatting may differ '
+                'from the live PDF export.',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.slateGrey,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.warmGrey,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.almondSilk),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.prussianBlue.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: AdminCanvasRenderer(
+                items: items,
+                canvasBackground: canvasBg,
+              ),
+            ),
           ),
         ],
       ),
