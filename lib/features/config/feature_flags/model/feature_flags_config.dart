@@ -43,6 +43,13 @@ class FeatureFlagsConfig {
       label: 'New Signups',
       description: 'Allow new account creation. Disable for emergencies.',
     ),
+    FlagDef(
+      key: 'guestModeEnabled',
+      label: 'Guest Mode',
+      description:
+      'Allow unauthed visitors to browse, build documents, and use AI '
+          'without signing up. Disable to require login before any action.',
+    ),
   ];
 
   factory FeatureFlagsConfig.fromMap(Map<String, dynamic> map) {
