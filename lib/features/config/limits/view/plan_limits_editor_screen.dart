@@ -138,7 +138,7 @@ class _Header extends StatelessWidget {
               ),
               SizedBox(height: 2),
               Text(
-                'Live caps for free / trial / pro plans. -1 = unlimited.',
+                'Live caps for guest / free / trial / pro plans. -1 = unlimited.',
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.slateGrey,
@@ -226,7 +226,7 @@ class _PlanCards extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
-        final cols = c.maxWidth > 980 ? 3 : 1;
+        final cols = c.maxWidth > 1280 ? 4 : c.maxWidth > 700 ? 2 : 1;
         const gap = 14.0;
         final w = (c.maxWidth - gap * (cols - 1)) / cols;
         return Wrap(
@@ -268,6 +268,7 @@ class _PlanCard extends StatelessWidget {
   Color get _planColor {
     if (plan == 'pro') return AppColors.darkRaspberry;
     if (plan == 'trial') return AppColors.magentaBloom;
+    if (plan == 'guest') return AppColors.dustyMauve;
     return AppColors.slateGrey;
   }
 

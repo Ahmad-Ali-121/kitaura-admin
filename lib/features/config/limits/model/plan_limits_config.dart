@@ -11,7 +11,7 @@ class PlanLimitsConfig {
     required this.proMonthlyPrice,
   });
 
-  static const planNames = <String>['free', 'trial', 'pro'];
+  static const planNames = <String>['guest', 'free', 'trial', 'pro'];
 
   /// Field key → display label for the form.
   static const fieldLabels = <String, String>{
