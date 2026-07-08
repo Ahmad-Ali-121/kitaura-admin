@@ -886,6 +886,9 @@ class _PlanBadge extends StatelessWidget {
     } else if (user.plan == 'trial') {
       bg = AppColors.magentaBloom;
       fg = AppColors.white;
+    } else if (user.plan == 'guest') {
+      bg = AppColors.dustyMauve;
+      fg = AppColors.white;
     } else {
       bg = AppColors.petalFrost;
       fg = AppColors.darkRaspberry;

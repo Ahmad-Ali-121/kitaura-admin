@@ -277,6 +277,8 @@ class _PlanChips extends StatelessWidget {
       children: [
         chip('All', 'all'),
         const SizedBox(width: 6),
+        chip('Guest', 'guest'),
+        const SizedBox(width: 6),
         chip('Free', 'free'),
         const SizedBox(width: 6),
         chip('Trial', 'trial'),
@@ -492,6 +494,9 @@ class _PlanBadge extends StatelessWidget {
       fg = AppColors.white;
     } else if (user.plan == 'trial') {
       bg = AppColors.magentaBloom;
+      fg = AppColors.white;
+    } else if (user.plan == 'guest') {
+      bg = AppColors.dustyMauve;
       fg = AppColors.white;
     } else {
       bg = AppColors.petalFrost;
