@@ -1,74 +1,124 @@
 <div align="center">
 
-# KitAura
+# KitAura Admin Panel
 
-**AI-powered CV, cover letter, and proposal builder — built in Flutter Web.**
+**Feature-complete admin dashboard for [KitAura](https://github.com/Winibex/KitAura) — Flutter Web.**
 
-[![Live](https://img.shields.io/badge/live-app--kitaura.winibex.com-831843)](https://app-kitaura.winibex.com)
-[![Marketing](https://img.shields.io/badge/marketing-kitaura.winibex.com-CF4D6F)](https://kitaura.winibex.com)
+[![Live](https://img.shields.io/badge/live-admin--kitaura.winibex.com-0F172A)](https://admin-kitaura.winibex.com)
 [![Flutter](https://img.shields.io/badge/Flutter-3.41.9-0F172A)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-3.11.5-0F172A)](https://dart.dev)
+[![Auth](https://img.shields.io/badge/auth-Firebase%20custom%20claim-CF4D6F)](https://firebase.google.com/docs/auth/admin/custom-claims)
 
 </div>
 
 ---
 
-## What is KitAura?
+## What is this?
 
-KitAura is a free document-building SaaS that lets anyone create professional CVs, cover letters, and proposals — with AI Compose, AI Refine, AI Assistant (Command-K editing), and AI Proofread. It also includes a LinkedIn content generator that turns your career profile into optimized posts, headlines, and summaries.
+A separate Flutter Web project (`kitaura_admin`) that connects to the same Firebase backend as the main KitAura app, gated behind the Firebase custom claim `admin: true`. Provides:
 
-- **Free-tier at launch** — Stripe deferred; admin can manually grant Pro
-- **Guest mode** — anonymous users can browse, build, and export a CV before signing up (Firebase Anonymous Auth)
-- **AI-powered** — Claude Sonnet 4.6 for content, Claude Haiku 4.5 for proofreading
-- **Live in production** at [app-kitaura.winibex.com](https://app-kitaura.winibex.com)
+- User support & lookup
+- Real-time AI spend monitoring (KitAura is free-tier — every Claude call costs money)
+- Live config editing (plan limits, pricing, Pro templates, feature flags, announcements)
+- Abuse detection (refusals + hourly burst + cost outliers)
+- Read-only document inspector with canvas preview (~85% visual fidelity)
+- Full audit log of every admin mutation
+
+**Deployed separately** to give the main app a smaller bundle and stronger security separation.
+
+**Live at** [admin-kitaura.winibex.com](https://admin-kitaura.winibex.com)
+
+## Status
+
+Feature-complete for current operational needs.
+
+- ✅ **Phase A1 — Foundation** (custom claim, guard, shell, audit collection)
+- ✅ **Phase A2 — Read-only dashboards** (KPI dashboard, users list, user detail, AI activity, AI failures, cost overview)
+- ✅ **Phase A3 — Config editors** (plan limits, pricing, Pro templates, feature flags, announcements)
+- ✅ **Phase A4 — Mutations + audit log** (6 user action buttons + full audit trail)
+- ✅ **Phase A5 — Investigative tools** (Steps 16–23 — per-user AI activity, documents, transactions, refusals, cost by user/feature, abuse monitor, document inspector with read-only canvas renderer)
+- ⏳ **Step 24 (Templates Manager)** — deferred until templates migrate from source-code data files to Firestore
+- ⏳ **Phase A6 (Multi-admin)** — deferred until a second admin is needed
+
+**23 of 25 screens live.**
 
 ## Features
 
-**Editors**
-- Free-canvas WYSIWYG editor for CV, cover letter, and proposal
-- 24 templates across the three document types (11 CV, 5 CL, 8 Proposal)
-- Multi-page A4 canvas with auto-arrange, snap guides, marquee select
-- Rich text via `flutter_quill`, custom fonts, per-op PDF rendering
-- Undo/redo, keyboard shortcuts (Ctrl+J / ⌘J for AI Assistant)
+**Dashboard** (`/admin`)
+- 8 KPI cards: total users, active today, MTD spend, active trials, signups this week, AI failures 24h, AI refusals 24h, cache hit rate
+- Top 5 spenders this month
+- Recent AI failures
 
-**AI**
-- **AI Compose** — generates section content from your Career Profile
-- **AI Refine** — 4 preset rewrite modes + custom instructions
-- **AI Assistant** — Command-K bar for natural-language canvas edits (11 op types)
-- **AI Proofread** — free spellcheck via Haiku
-- **AI Client Builder** — one-shot brief extraction + multi-turn interview for proposals
+**Users** (`/admin/users`, `/admin/users/:uid`)
+- Paginated search + plan filter + sort
+- Guest filter chip (dustyMauve badge for anonymous users)
+- User detail: profile, subscription, lifetime totals
+- 6 mutation buttons: grant Pro, extend trial, reset counters, reset hourly burst, reset refusal soft-block, revoke Pro
+- Tabs: AI Activity, Documents, Transactions
 
-**Guest mode**
-- Lazy anonymous sign-in on first action
-- 3 docs / 15 AI Compose / 7 AI Assistant / 3 exports before signup
-- `linkWithCredential` upgrade preserves guest work (same UID)
-- Merge picker for the credential-already-in-use case
+**AI monitoring** (`/admin/ai`, `/admin/ai/failures`, `/admin/ai/refusals`)
+- Cross-user AI activity feed with tool/status/user/date filters
+- AI Failures with error pattern grouping + spike detection
+- AI Refusals with reason grouping
 
-**Everything else**
-- Firebase App Check (reCAPTCHA Enterprise) on all AI endpoints
-- Server-side counter tracking (frontend can't touch subscription writes)
-- Live feature-flag gating from `config/featureFlags` (kill-switch every AI feature independently)
-- Announcement banner reading `config/announcement`
-- Skeleton loading, offline detection, safe-default policies throughout
+**Finance** (`/admin/finance`, `/admin/finance/by-user`, `/admin/finance/by-feature`)
+- 30-day spend chart (fl_chart)
+- Model + tool breakdown
+- Cache savings
+- Per-user rankings (sortable by spend / refusal rate / call count)
+- Per-feature stacked bar chart
+
+**Config editors** (`/admin/config/*`)
+- Plan limits (4-tier: Guest / Free / Trial / Pro) with dirty-tracking + diff confirmation
+- Model pricing
+- Pro template IDs
+- Feature flags (7 kill-switches — `guestModeEnabled` added Phase H)
+- Announcements (auto-generates fresh hex `id` on every save so dismissed users get re-notified)
+
+**Investigation** (`/admin/abuse`, `/admin/documents`, `/admin/documents/:type/:uid/:docId`)
+- Composite abuse monitor: refusals ≥3 + hourly burst ≥10 + top 10% spenders
+- Cross-user document list with type filter + cursor pagination
+- Document inspector with read-only `AdminCanvasRenderer` (~85% visual fidelity, per-item collapsible JSON)
+
+**Audit log** (`/admin/audit`)
+- Every mutation written in the same batch as the action
+- Filter by admin, action type, date range, target user
+- Expandable rows show side-by-side BEFORE/AFTER JSON
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
-| Frontend | Flutter Web 3.41.9 / Dart 3.11.5 |
-| Rich text | `flutter_quill` 11.5.0 |
-| PDF | `pdf` + `printing` (direct `pw.Font.ttf` loading) |
-| State | Riverpod 2.x (StateNotifier + ChangeNotifier + StreamProvider) |
-| Navigation | `go_router` with auth guard |
-| Auth | Firebase Auth (Google + Email/Password + Anonymous) |
-| Database | Firebase Firestore (Schema v6) |
-| Storage | Firebase Storage |
-| AI | Claude Sonnet 4.6 & Haiku 4.5 via Firebase Cloud Functions proxy |
-| App Check | reCAPTCHA Enterprise |
-| Email | Resend (branded verification + password reset) |
-| Hosting | Hostinger Business Plan + GitHub Actions CI/CD |
+Inherits the main app's stack:
 
-Custom fonts: Arial, OpenSans, Poppins, Sekuya (in `assets/fonts/`).
+- Flutter Web 3.41.9 / Dart 3.11.5
+- Riverpod 2.x (StateNotifier + FutureProvider)
+- go_router with admin guard
+- Firebase Auth with custom claim `admin: true`
+- Firestore (shared with main app — no schema divergence)
+- fl_chart for spend visualizations
+- Firebase Cloud Functions with `adminGuard` on every mutation
+
+## Security Model
+
+```
+FIREBASE CUSTOM CLAIM: admin: true
+  ├── Set via Admin SDK, one-off bootstrap script
+  └── Token-level check — no per-request Firestore read
+
+FRONTEND
+  ├── GoRouter redirect: idTokenResult.claims['admin'] === true → allow
+  └── Non-admins redirect to /dashboard on main app
+
+CLOUD FUNCTIONS (all admin ops)
+  ├── adminGuard() first line — throws if claim missing
+  ├── Validate inputs strictly
+  ├── Read before-snapshot
+  ├── Batch write: mutation + adminActivity audit entry
+  └── Return { success: true }
+
+FIRESTORE RULES
+  └── adminActivity: read for admins, write blocked (functions only)
+```
+
+Admin reads of user data go through Cloud Functions using the Admin SDK (which bypasses rules). Firestore rules don't try to express "admin can read any user" — that would weaken the primary rules.
 
 ## Project Structure
 
@@ -76,170 +126,129 @@ Custom fonts: Arial, OpenSans, Poppins, Sekuya (in `assets/fonts/`).
 lib/
 ├── app.dart, main.dart, firebase_options.dart
 ├── core/
-│   ├── constants/    # colors, fonts, routes, sizes, AI labels
+│   ├── router/       # app_router with adminGuard
 │   ├── theme/
-│   └── utils/        # responsive, validators
+│   └── constants/    # brand colors, fonts
 ├── features/
-│   ├── auth/         # login, signup, password reset
-│   ├── dashboard/    # main dashboard
-│   ├── ai_setup/     # Career Profile wizard
-│   ├── cv/           # dashboard + templates + editor
-│   ├── cover_letter/ # dashboard + templates + editor
-│   ├── proposal/     # dashboard + templates + editor
-│   ├── linkedin/     # LinkedIn content generator
-│   └── settings/     # profile, plan, preferences, profiles
+│   ├── auth/         # admin login (email + Google)
+│   ├── shell/        # AdminShell — sidebar + top bar
+│   ├── dashboard/    # KPI dashboard
+│   ├── users/        # list + detail (with tabs)
+│   ├── ai/           # activity, failures, refusals
+│   ├── finance/      # cost overview + by-user + by-feature
+│   ├── config/       # limits, pricing, pro-templates, feature-flags, announcements
+│   ├── audit/        # audit log
+│   ├── abuse/        # abuse monitor
+│   └── documents/    # list + inspector
 └── shared/
-    ├── ai/           # Claude controller + service, spellcheck
-    ├── canvas/       # engine (canvas_controller, reflow, PDF) + editor UI
-    ├── models/       # subscription, ai_profile, canvas_item, etc.
-    ├── providers/    # ai_profiles, feature_flags
-    ├── services/     # firebase_service, paywall_service, connectivity
-    └── widgets/      # sidebar, top bar, banners, modals
-
-functions/
-├── index.js          # aiFill, aiRewrite, aiEdit, spellcheck, tracking
-├── upgrade_guest.js
-└── merge_guest.js
+    ├── models/       # admin_activity, feature_flag, announcement, admin_action
+    ├── services/     # admin_firebase_service, admin_functions_service
+    └── widgets/      # admin_confirm_dialog, admin_data_table, canvas_renderer
 ```
 
-## Firebase Schema (v6)
+## Cloud Functions (in main app's `functions/` folder)
 
-Full schema in project docs. Highlights:
+15 admin-only endpoints, all in `functions/admin_*.js`:
+
+| File | Endpoints |
+|---|---|
+| `admin.js` | adminGuard helper, setAdminClaim |
+| `admin_dashboard.js` | adminGetDashboardKpis |
+| `admin_users.js` | adminListUsers, adminGetUserOverview |
+| `admin_ai_activity.js` | adminListAiActivity (userId + statusFilter + cursor) |
+| `admin_user_documents.js` | adminListUserDocuments |
+| `admin_cost_overview.js` | adminGetCostOverview |
+| `admin_cost_by_user.js` | adminGetCostByUser |
+| `admin_cost_by_feature.js` | adminGetCostByFeature |
+| `admin_abuse_monitor.js` | adminGetAbuseMonitor |
+| `admin_documents.js` | adminListDocuments, adminGetDocument |
+| `admin_actions.js` | adminSetPlan, adminResetCounters, adminResetHourlyBurst, adminResetRefusalCount, adminExtendTrial |
+| `admin_config.js` | adminUpdateConfig |
+| `admin_announcement.js` | adminUpdateAnnouncement |
+
+Every audit-logged mutation writes `adminActivity/{id}` in the same batch as the mutation.
+
+## Firestore Additions
+
+Schema is additive — no changes to existing main-app collections:
 
 ```
-users/{uid}
-users/{uid}/data/subscription       # plan, counters, cycle
-users/{uid}/data/preferences
-users/{uid}/aiProfiles/{profileId}  # Career Profiles (multi + default flag)
-users/{uid}/clientProfiles/{id}     # Proposals client data
-users/{uid}/cvs/{cvId}              # CV documents
-users/{uid}/coverLetters/{clId}
-users/{uid}/proposals/{propId}
-users/{uid}/linkedinSummaries/{id}
-users/{uid}/aiActivity/{id}         # per-call log (tokens, cost, status)
-users/{uid}/analytics/{YYYY-MM}     # monthly aggregates
-users/{uid}/analytics/summary       # lifetime aggregates
-users/{uid}/transactions/{txId}
-
-config/limits                       # plan limits (admin-editable)
-config/pricing                      # Anthropic rates
-config/proTemplates                 # Pro template IDs
-config/featureFlags                 # 8 kill-switches
-config/announcement                 # active system banner
+adminActivity/{actionId}      # Audit log
+config/featureFlags           # 8 kill-switches
+config/announcement           # Active system banner (auto-generates fresh id per save)
 ```
 
-**Security:** Cloud Functions own all counter, aiActivity, and analytics writes. Frontend can only write user-owned content (profile, aiProfiles, docs, preferences).
-
-## Cloud Functions
-
-| Endpoint | Model | Purpose |
-|---|---|---|
-| `aiFill` | Sonnet 4.6 | AI Compose (CV/CL/proposal/LinkedIn + client extract/chat) |
-| `aiRewrite` | Sonnet 4.6 | AI Refine |
-| `aiEdit` | Sonnet 4.6 | AI Assistant (Command-K canvas edits) |
-| `spellcheck` | Haiku 4.5 | AI Proofread |
-| `trackExport` | — | Export paywall + counter + Pro template check |
-| `trackLogin` / `trackDocCreated` / `trackDocDeleted` | — | Server-side counters |
-| `activateTrial` | — | 7-day trial activation |
-| `upgradeGuestToFree` | — | Guest → real account conversion |
-| `mergeGuestData` | — | Merge guest docs into existing account |
-
-All AI endpoints enforce Firebase App Check (reCAPTCHA Enterprise).
-
-## Plan Limits
-
-| Feature | Guest | Free | Trial (7d) | Pro ($8/mo)* |
-|---|---|---|---|---|
-| Docs (CV+CL+Proposal combined) | 3 | 5 | Unlimited | 30 |
-| AI Compose + Refine (combined) | 15/mo | 30/mo | Unlimited | 100/mo |
-| AI Assistant | 7/mo | 15/mo | Unlimited | 100/mo + 20/hr |
-| Exports | 3/mo | 10/mo | Unlimited | Unlimited |
-| AI Proofread | Free | Free | Free | Free |
-
-\* Pro tier exists in schema and Cloud Functions but Stripe is deferred at launch. Admin can manually grant Pro via the admin panel.
+Existing collections read via Cloud Functions with Admin SDK privileges.
 
 ## Running Locally
 
 ```bash
 # 1. Clone
-git clone https://github.com/Winibex/KitAura.git
-cd KitAura
+git clone https://github.com/Winibex/kitaura_admin.git
+cd kitaura_admin
 
 # 2. Install
 flutter pub get
 
 # 3. Firebase config
-# Place your firebase_options.dart at lib/firebase_options.dart
-# (run `flutterfire configure` if setting up a new Firebase project)
+# Same firebase_options.dart as main app (shared backend)
 
-# 4. Run
+# 4. Grant yourself the admin claim (one-off, via scripts/bootstrap-admin.js)
+# See "Bootstrapping the first admin" below
+
+# 5. Run
 flutter run -d chrome
 ```
 
-**Cloud Functions:**
+## Bootstrapping the First Admin
 
-```bash
-cd functions
-npm install
-firebase deploy --only functions:aiFill  # deploy single function
+One-time setup via Node script (in the main app repo's `scripts/` folder):
+
+```javascript
+// scripts/bootstrap-admin.js
+const admin = require('firebase-admin');
+admin.initializeApp({
+  credential: admin.credential.cert(require('./service-account.json')),
+});
+
+const targetUid = 'YOUR_UID_HERE'; // from Firebase Auth console
+await admin.auth().setCustomUserClaims(targetUid, { admin: true });
+console.log('Done. Sign out and sign back in for the token to refresh.');
 ```
 
-Secrets required in Google Secret Manager:
-- `ANTHROPIC_KEY`
-- `RESEND_API_KEY`
+After that, the `setAdminClaim` Cloud Function can grant admin to additional UIDs (callable only by existing admins).
 
-## Deployment
+## Firestore Indexes
 
-Push to `main` triggers GitHub Actions:
-1. Setup Flutter 3.41.9 → `flutter pub get`
-2. `flutter build web --release --base-href "/" --tree-shake-icons --source-maps`
-3. Push `build/web/` to `hostinger-deploy` branch
-4. Hostinger auto-pulls from `hostinger-deploy`
+Managed via `firestore.indexes.json` (deployed with `firebase deploy --only firestore:indexes`).
 
-Requires `.htaccess` on the Hostinger side redirecting all routes to `index.html` for client-side routing.
+**Composite:**
+- `aiActivity` collection group: `status` ASC + `createdAt` DESC
 
-## Architecture Principles
+**Single-field collection-group exemptions:**
+- `aiActivity.createdAt` (ASC + DESC)
+- `cvs.updatedAt` (DESC)
+- `coverLetters.updatedAt` (DESC)
+- `proposals.updatedAt` (DESC)
 
-- **Strict MVC.** Views never import `cloud_firestore`. All data access via controllers/services.
-- **Riverpod discipline.** `ref.read` in event handlers, `ref.watch` only in `build()`.
-- **Server-side counter tracking.** Frontend cannot manipulate subscription doc.
-- **Doc counts from collection queries**, not `subscription.cvCount`. Frontend never trusts server counters for reads.
-- **Feature flags default TRUE** on error or missing. Safe defaults everywhere.
-- **Continuation items** cleared *before* reflow, never saved to Firestore.
-- **Quill newlines** always plain — never `{'insert': 'text\n', 'attributes': {...}}`.
-- **AnimationControllers only tick when visible.** Overlays and top bars gate on visibility state.
+## UI Conventions
 
-## Brand
+- **Sidebar:** Prussian Blue (dark) — visually distinct from main app's white sidebar
+- **Admin badge:** Magenta Bloom chip in top bar
+- **Destructive actions:** `Colors.red.shade700` — the one place we break the "brand colors only" rule, because admin mutations are dangerous and need urgent visual weight
+- **Confirmation modals:** Mandatory for every mutation, always show audit preview ("This will be logged as: adminSetPlan by you")
 
-**Primary palette**
-- Warm Grey `#F8F5F2` — page backgrounds
-- Lavender Blush `#FFF1F5` — editor bg, input fills
-- Petal Frost `#FFE4EC` — cards, borders
-- Prussian Blue `#0F172A` — text, dark bg, headers
-- Dark Raspberry `#831843` — primary CTAs
+## Deferred Work
 
-**Secondary**
-- Almond Silk `#C5AFA4` — borders, muted text
-- Dusty Rose `#CC7E85` — hover states
-- Magenta Bloom `#CF4D6F` — badges, emphasis
-- Dusty Mauve `#A36D90` — secondary buttons
-- Slate Grey `#76818E` — subtitles, placeholders
+- **Templates Manager** (Step 24) — waits on templates migrating from `*_template_data.dart` files to Firestore
+- **Multi-admin support** (Phase A6) — waits on the need to grant admin to a second person
+- **Scheduled aggregate cache** — Cost Overview currently recomputes on every load. Deploy `scheduledAggregateRefresh` when AI call volume crosses ~50k/month.
 
-**Fonts**
-- Poppins — UI headings, buttons, labels
-- OpenSans — body text
-- Arial — default CV text
-- Sekuya — display/decorative
+## Related
 
-## Related Projects
-
-- **[kitaura_admin](https://github.com/Winibex/kitaura_admin)** — separate Flutter Web admin panel sharing this Firebase backend
-- **kitaura.winibex.com** — WordPress marketing site (separate repo)
+- **[KitAura](https://github.com/Winibex/KitAura)** — main user-facing app (Flutter Web)
+- Shared Firebase project: `kitaura-app` (us-central1)
 
 ## License
 
 Proprietary. All rights reserved © 2026 Winibex.
-
-## Contact
-
-Built by [@Winibex](https://github.com/Winibex).
